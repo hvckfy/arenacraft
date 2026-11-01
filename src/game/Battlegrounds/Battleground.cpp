@@ -16,7 +16,7 @@
  */
 
 #include "Battleground.h"
-#include "ReplayRecorder.hpp"
+#include "ArenaAnticheat.hpp"
 #include "ArenaSpectator.h"
 #include "ArenaTeam.h"
 #include "BattlegroundBE.h"
@@ -40,6 +40,7 @@
 #include "ObjectMgr.h"
 #include "Pet.h"
 #include "Player.h"
+#include "ReplayRecorder.hpp"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
 #include "SpellAuras.h"
@@ -823,7 +824,10 @@ void Battleground::EndBattleground(PvPTeamId winnerTeamId)
   SetWinner(winnerTeamId);
 
   if (isArena())
+  {
     arenacraft::replay::ReplayRecorder::instance().onArenaEnd(this, uint8(GetTeamId(winnerTeamId)));
+    arenacraft::anticheat::ArenaAnticheat::instance().onArenaEnd(this);
+  }
 
   if (winnerTeamId == PVP_TEAM_ALLIANCE)
   {

@@ -820,6 +820,24 @@ void CharacterDatabaseConnection::DoPrepareStatements()
       "WHERE r.id IN (SELECT replay_id FROM arena_replay_player WHERE name = ?) "
       "GROUP BY r.id ORDER BY r.id DESC LIMIT ?",
       CONNECTION_SYNCH);
+
+  // Arenacraft: arena statistical anticheat flags (src/game/Arenacraft/anticheat)
+  PrepareStatement(CHAR_INS_ARENA_ACHECK_FLAG,
+                   "INSERT INTO arena_anticheat_flag (replay_id, guid, name, reason, detail, created_at, status) "
+                   "VALUES (?, ?, ?, ?, ?, NOW(), 'open')",
+                   CONNECTION_ASYNC);
+  PrepareStatement(CHAR_SEL_ARENA_ACHECK_FLAGS,
+                   "SELECT id, replay_id, name, reason, detail, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i'), status "
+                   "FROM arena_anticheat_flag WHERE status = 'open' ORDER BY id DESC LIMIT ?",
+                   CONNECTION_SYNCH);
+  PrepareStatement(CHAR_SEL_ARENA_ACHECK_FLAG,
+                   "SELECT id, replay_id, name, reason, detail, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i'), status "
+                   "FROM arena_anticheat_flag WHERE id = ?",
+                   CONNECTION_SYNCH);
+  PrepareStatement(CHAR_UPD_ARENA_ACHECK_FLAG,
+                   "UPDATE arena_anticheat_flag SET status = 'dismissed', handled_by = ?, handled_at = NOW() "
+                   "WHERE id = ?",
+                   CONNECTION_ASYNC);
   PrepareStatement(CHAR_UPD_GENDER_AND_APPEARANCE,
                    "UPDATE characters SET gender = ?, skin = ?, face = ?, hairStyle = ?, hairColor = ?, facialStyle = "
                    "? WHERE guid = ?",

@@ -574,6 +574,8 @@ public:
   UsedSpellMods m_appliedMods;
 
   int32 GetCastTime() const { return m_casttime; }
+  // Arenacraft: elapsed cast time so far, ms (arena interrupt-reaction anticheat)
+  int32 GetElapsedCastTime() const { return m_casttime > m_timer ? m_casttime - m_timer : 0; }
   bool  IsAutoRepeat() const { return m_autoRepeat; }
   void  SetAutoRepeat(bool rep) { m_autoRepeat = rep; }
   void  ReSetTimer() { m_timer = m_casttime > 0 ? m_casttime : 0; }

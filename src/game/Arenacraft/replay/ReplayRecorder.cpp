@@ -368,10 +368,10 @@ void ReplayRecorder::onArenaEnd(Battleground* bg, uint8_t winnerTeam)
     return;
   }
 
-  save(std::move(active), winnerTeam, duration);
+  save(bg->GetInstanceID(), std::move(active), winnerTeam, duration);
 }
 
-void ReplayRecorder::save(Active active, uint8_t winnerTeam, uint32_t durationMs)
+void ReplayRecorder::save(uint32_t bgInstanceId, Active active, uint8_t winnerTeam, uint32_t durationMs)
 {
   ReplayData replay;
   replay.recordStartMs = active.recording->startMs();
@@ -389,7 +389,11 @@ void ReplayRecorder::save(Active active, uint8_t winnerTeam, uint32_t durationMs
     return;
   }
 
-  uint32 const                 id    = ++_lastId;
+  uint32 const id = ++_lastId;
+  {
+    std::lock_guard<std::mutex> guard(_lock);
+    _savedReplayIds[bgInstanceId] = id;
+  }
   CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
   CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_ARENA_REPLAY);
@@ -433,5 +437,15 @@ void ReplayRecorder::save(Active active, uint8_t winnerTeam, uint32_t durationMs
 
   LOG_INFO("bg.arena", "Arena replay #{} saved: {} on map {}, {} packets, {}s", id, bracketName(active.bracket),
            active.mapId, replay.packets.size(), durationMs / IN_MILLISECONDS);
+}
+std::optional<uint32_t> ReplayRecorder::takeSavedReplayId(uint32_t bgInstanceId)
+{
+  std::lock_guard<std::mutex> guard(_lock);
+  auto                        itr = _savedReplayIds.find(bgInstanceId);
+  if (itr == _savedReplayIds.end())
+    return std::nullopt;
+  uint32_t const id = itr->second;
+  _savedReplayIds.erase(itr);
+  return id;
 }
 } // namespace arenacraft::replay

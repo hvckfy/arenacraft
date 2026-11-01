@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ArenaAnticheat.hpp"
 #include "Battleground.h"
 #include "BattlegroundIC.h"
 #include "BattlegroundMgr.h"
@@ -3804,6 +3805,16 @@ void Spell::EffectInterruptCast(SpellEffIndex effIndex)
           unitTarget->ProhibitSpellSchool(curSpellInfo->GetSchoolMask(), duration /*spellInfo->GetDuration()*/);
         }
         ExecuteLogEffectInterruptCast(effIndex, unitTarget, curSpellInfo->Id);
+
+        // Arenacraft: feed the arena interrupt-reaction anticheat. Only
+        // player-vs-player, cast-time generic spells; reaction is how far into
+        // the victim's cast the interrupt landed.
+        if (i == CURRENT_GENERIC_SPELL && spell->GetCastTime() > 0)
+          if (Player* interrupter = GetCaster() ? GetCaster()->ToPlayer() : nullptr)
+            if (Player* victim = unitTarget->ToPlayer())
+              arenacraft::anticheat::ArenaAnticheat::instance().onInterrupt(interrupter, victim,
+                                                                            uint32(spell->GetElapsedCastTime()));
+
         unitTarget->InterruptSpell(CurrentSpellTypes(i), false);
       }
     }

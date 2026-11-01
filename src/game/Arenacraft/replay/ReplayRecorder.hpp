@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -81,6 +82,11 @@ public:
   // Classifies an arena for the bracket filter.
   [[nodiscard]] static Bracket bracketOf(Battleground const* bg);
 
+  // Arenacraft: the replay id saved for this ended match, consumed once by
+  // the arena anticheat so it can link a flag to a watchable replay. nullopt
+  // when the match produced no recording (bracket off / too short).
+  [[nodiscard]] std::optional<uint32_t> takeSavedReplayId(uint32_t bgInstanceId);
+
 private:
   ReplayRecorder() = default;
 
@@ -96,10 +102,11 @@ private:
     std::vector<Participant>   participants;
   };
 
-  void save(Active active, uint8_t winnerTeam, uint32_t durationMs);
+  void save(uint32_t bgInstanceId, Active active, uint8_t winnerTeam, uint32_t durationMs);
 
-  std::mutex                           _lock;
-  std::unordered_map<uint32_t, Active> _active; // by bg instance id
-  std::atomic<uint32_t>                _lastId{0};
+  std::mutex                             _lock;
+  std::unordered_map<uint32_t, Active>   _active;         // by bg instance id
+  std::unordered_map<uint32_t, uint32_t> _savedReplayIds; // bg instance id -> replay id, drained by anticheat
+  std::atomic<uint32_t>                  _lastId{0};
 };
 } // namespace arenacraft::replay
