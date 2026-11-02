@@ -4,6 +4,7 @@
 #include "ReplayFormat.hpp"
 
 #include <cstdint>
+#include <string>
 
 class Battleground;
 class Player;
@@ -41,6 +42,9 @@ private:
   [[nodiscard]] Player* viewerOnMap(Battleground* bg) const;
   void                  sendDue(Player* viewer);
 
+  // tells patrol (and anything else) that the playback is over, once
+  void finish(bool watched);
+
   ObjectGuid  _viewer;
   uint32_t    _replayId;
   ReplayData  _data;
@@ -48,9 +52,14 @@ private:
   uint32_t    _timer   = 0; // ms in the current state
   uint32_t    _startMs = 0; // getMSTime() when playback started
   std::size_t _next    = 0; // next packet to send
+  bool        _started = false;
+  bool        _ended   = false;
 };
 
 // Starts watching replay `id` for `viewer`: loads it, opens a private arena and
 // moves the viewer in as a spectator. Reports problems to the viewer's chat.
 void watch(Player* viewer, uint32_t id);
+
+// Why `player` cannot watch a replay right now, or an empty string.
+std::string cannotWatchReason(Player* player);
 } // namespace arenacraft::replay

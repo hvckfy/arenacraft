@@ -8,6 +8,7 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Opcodes.h"
+#include "Patrol.hpp"
 #include "Player.h"
 #include "ReplayConfig.hpp"
 #include "ReplayRecorder.hpp"
@@ -93,7 +94,9 @@ void openReplay(Player* viewer, uint32_t id, uint32_t mapId, uint32_t bgTypeId, 
   viewer->TeleportTo(mapId, start.GetPositionX(), start.GetPositionY(), start.GetPositionZ(), start.GetOrientation(),
                      TELE_TO_GM_MODE);
 
-  tell(viewer, "Replay #" + std::to_string(id) + ": loading... Type .replay leave to stop watching.");
+  // patrol reviews never show the replay id: it would lead to the real names via .replay list
+  std::string const title = patrol::IsReviewing(viewer->GetGUID()) ? "Patrol replay" : "Replay #" + std::to_string(id);
+  tell(viewer, title + ": loading... Type .replay leave to stop watching.");
 }
 } // namespace
 
@@ -129,6 +132,14 @@ void Playback::sendDue(Player* viewer)
   }
 }
 
+void Playback::finish(bool watched)
+{
+  if (_ended)
+    return;
+  _ended = true;
+  patrol::OnReplayEnded(_viewer, _replayId, watched);
+}
+
 bool Playback::update(Battleground* bg, uint32_t diff)
 {
   _timer += diff;
@@ -142,16 +153,24 @@ bool Playback::update(Battleground* bg, uint32_t diff)
       _state   = State::Playing;
       _timer   = 0;
       _startMs = getMSTime();
-      tell(viewer, "Replay #" + std::to_string(_replayId) + " started.");
+      tell(viewer,
+           (patrol::IsReviewing(_viewer) ? std::string("Patrol replay") : "Replay #" + std::to_string(_replayId)) +
+               " started.");
       sendDue(viewer);
+      _started = true;
+      patrol::OnReplayStarted(viewer, _replayId);
     }
     else if (_timer >= ViewerArrivalTimeoutMs)
+    {
       _state = State::Done;
+      finish(false);
+    }
     break;
   case State::Playing:
     if (!viewer)
     {
       _state = State::Done;
+      finish(_started);
       break;
     }
     sendDue(viewer);
@@ -164,12 +183,16 @@ bool Playback::update(Battleground* bg, uint32_t diff)
     break;
   case State::Finished:
     if (!viewer)
+    {
       _state = State::Done;
+      finish(true);
+    }
     else if (_timer >= LingerAfterEndMs)
     {
       viewer->TeleportToEntryPoint();
       _timer = 0;
       _state = State::Done;
+      finish(true);
     }
     break;
   case State::Done:
@@ -178,6 +201,8 @@ bool Playback::update(Battleground* bg, uint32_t diff)
   }
   return true;
 }
+
+std::string cannotWatchReason(Player* player) { return whyCannotWatch(player); }
 
 void watch(Player* viewer, uint32_t id)
 {

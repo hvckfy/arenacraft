@@ -14,7 +14,8 @@ Code: `src/game/Arenacraft/replay/`. Tables: `arena_replay`, `arena_replay_playe
 | `AC_REPLAY_MAX_PER_PLAYER` | `0`              | keep the newest N recordings per character                |
 
 `0` = no limit. Limits are enforced right after each saved match (same
-transaction as the insert); `KEEP_DAYS` also on worldserver startup. Per-player:
+transaction as the insert); `KEEP_DAYS` also on worldserver startup. Recordings
+with an open patrol case are never deleted by these limits. Per-player:
 a match is deleted for all participants once it falls out of any one
 participant's newest N.
 
@@ -23,6 +24,8 @@ participant's newest N.
 - `.replay <id>` / `.replay watch <id>` - watch
 - `.replay list [name]` - newest 10, optionally only matches of `name`
 - `.replay leave` - stop watching (`.spect leave` works too)
+- `.replay report <id> <name> <category>` - report a player of a match you played in to the patrol
+  (see `patrol.md`)
 
 ## How it works
 

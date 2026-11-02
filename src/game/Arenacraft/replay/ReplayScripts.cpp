@@ -4,6 +4,7 @@
  *   .replay <id>          watch recording <id> (alias: .replay watch <id>)
  *   .replay list [name]   newest recordings, optionally only those with <name>
  *   .replay leave         stop watching
+ *   .replay report <id> <name> <category>   report a player of a match you played in (see Patrol.hpp)
  */
 #include "ReplayScripts.hpp"
 
@@ -12,6 +13,7 @@
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "ObjectMgr.h"
+#include "Patrol.hpp"
 #include "Player.h"
 #include "ReplayConfig.hpp"
 #include "ReplayPlayback.hpp"
@@ -60,9 +62,8 @@ public:
   ChatCommandTable GetCommands() const override
   {
     static ChatCommandTable replayTable = {
-        {"list", HandleList, SEC_PLAYER, Console::Yes},
-        {"leave", HandleLeave, SEC_PLAYER, Console::No},
-        {"watch", HandleWatch, SEC_PLAYER, Console::No},
+        {"list", HandleList, SEC_PLAYER, Console::Yes},  {"report", HandleReport, SEC_PLAYER, Console::No},
+        {"leave", HandleLeave, SEC_PLAYER, Console::No}, {"watch", HandleWatch, SEC_PLAYER, Console::No},
         {"", HandleWatch, SEC_PLAYER, Console::No},
     };
     static ChatCommandTable commandTable = {{"replay", replayTable}};
@@ -74,7 +75,21 @@ public:
     Player* player = handler->GetPlayer();
     if (!player)
       return false;
+    if (patrol::IsReviewing(player->GetGUID()))
+    {
+      handler->SendSysMessage("Finish or skip your patrol case first.");
+      return true;
+    }
     watch(player, id);
+    return true;
+  }
+
+  static bool HandleReport(ChatHandler* handler, uint32 id, std::string suspect, std::string category)
+  {
+    Player* player = handler->GetPlayer();
+    if (!player)
+      return false;
+    patrol::Report(handler, player, id, suspect, category);
     return true;
   }
 
@@ -92,6 +107,13 @@ public:
 
   static bool HandleList(ChatHandler* handler, Optional<std::string> name)
   {
+    // a patroller could match the match they review to its real names
+    if (Player* player = handler->GetPlayer(); player && patrol::IsReviewing(player->GetGUID()))
+    {
+      handler->SendSysMessage("Finish or skip your patrol case first.");
+      return true;
+    }
+
     CharacterDatabasePreparedStatement* stmt;
     if (name && !name->empty())
     {
