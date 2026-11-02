@@ -556,6 +556,16 @@ void OnReplayEnded(ObjectGuid viewerGuid, uint32 replayId, bool watched)
   AskQuestion(viewer, *review);
 }
 
+void OnReplaySeeked(Player* viewer, uint32 replayId)
+{
+  std::optional<Review> review = FindReview(viewer->GetGUID());
+  if (!review || review->replayId != replayId || review->answering || !review->follow)
+    return;
+  // a seek back destroyed and re-created the suspect on the client; point the camera at the new object again
+  SetFollow(viewer, *review, false);
+  SetFollow(viewer, *review, true);
+}
+
 void OnLogout(Player* player) { EndReview(player->GetGUID()); }
 
 std::optional<std::string> AliasFor(ObjectGuid viewer, ObjectGuid target)

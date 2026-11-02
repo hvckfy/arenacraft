@@ -34,6 +34,8 @@ void ListOpenCases(ChatHandler* handler);
 // playback never started (viewer did not arrive).
 void OnReplayStarted(Player* viewer, uint32 replayId);
 void OnReplayEnded(ObjectGuid viewer, uint32 replayId, bool watched);
+// The viewer jumped on the replay timeline: the recorded objects were rebuilt, so the camera is re-attached.
+void OnReplaySeeked(Player* viewer, uint32 replayId);
 // Drops an unfinished review (no verdict is recorded).
 void OnLogout(Player* player);
 
