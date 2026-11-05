@@ -72,10 +72,15 @@ COPY deps deps
 # .zig-cache can never be reused by this ubuntu build (and vice versa). On a
 # podman builder they live under $TMPDIR/buildah-cache-$UID, so point TMPDIR at
 # a persistent disk when building on an ephemeral/small machine.
+# Fixed CPU level, never the build machine's own CPU (zig's default is -mcpu=native): CI runners are a mix of AMD and
+# Intel machines, so a native build (1) missed the whole zig cache whenever a run landed on another CPU model and (2)
+# could emit instructions (e.g. AVX-512) the game server does not have. x86_64_v2 runs on any x86 server of the last
+# ~15 years; arm64 builds use the generic baseline.
 RUN --mount=type=cache,id=arenacraft-zig-cache,target=/app/.zig-cache \
     --mount=type=cache,id=arenacraft-zig-pkg,target=/app/zig-pkg \
     --mount=type=cache,id=arenacraft-zig-global,target=/root/.cache/zig \
-    zig build -j"$(nproc)" -Doptimize=ReleaseFast ac
+    case "$(uname -m)" in x86_64) ZIG_CPU=x86_64_v2 ;; *) ZIG_CPU=baseline ;; esac \
+    && zig build -j"$(nproc)" -Doptimize=ReleaseFast -Dcpu="$ZIG_CPU" ac
 
 # --- runtime ---------------------------------------------------------------
 FROM docker.io/library/ubuntu:${UBUNTU_VERSION} AS runtime
